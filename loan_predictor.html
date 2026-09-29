@@ -1,0 +1,104 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>LoanLens – Approval Prediction Platform</title>
+<style>
+:root{--bg:#0b1220;--card:rgba(255,255,255,.07);--bd:rgba(255,255,255,.14);--tx:#eaf0ff;--mu:#9fb0d0;--ac:#4ade80;--rs:#f87171;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root:not([data-theme="dark"]):not([data-theme="light"]){}
+@media(prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#eef3ff;--card:rgba(255,255,255,.75);--bd:rgba(20,40,90,.15);--tx:#0f1b3a;--mu:#51618a;--ac:#16a34a;--rs:#dc2626}}
+:root[data-theme="light"]{--bg:#eef3ff;--card:rgba(255,255,255,.75);--bd:rgba(20,40,90,.15);--tx:#0f1b3a;--mu:#51618a;--ac:#16a34a;--rs:#dc2626}
+:root[data-theme="dark"]{--bg:#0b1220;--card:rgba(255,255,255,.07);--bd:rgba(255,255,255,.14);--tx:#eaf0ff;--mu:#9fb0d0;--ac:#4ade80;--rs:#f87171}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;min-height:100%}
+canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+.wrap{position:relative;z-index:1;max-width:1150px;margin:auto;padding:20px 16px 40px}
+header{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;margin-bottom:16px}
+h1{margin:0;font-size:24px}h1 span{color:var(--ac)}.sub{color:var(--mu);font-size:13px}
+.bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.bar button,.chip{background:var(--card);border:1px solid var(--bd);color:var(--tx);border-radius:999px;padding:6px 12px;cursor:pointer;font-size:13px;backdrop-filter:blur(8px)}
+.bar button.on{background:var(--ac);color:#04210f;border-color:transparent;font-weight:600}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:16px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:16px;backdrop-filter:blur(14px);margin-bottom:16px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--mu);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+label{display:block;font-size:12px;color:var(--mu);margin:10px 0 3px}
+select,input[type=number]{width:100%;padding:8px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-size:14px}
+select option{color:#000}
+input[type=range]{width:100%;accent-color:var(--ac)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.val{float:right;color:var(--tx);font-weight:600}
+.gauge{text-align:center}.pct{font-size:44px;font-weight:700;line-height:1;margin-top:-58px}
+.verdict{display:inline-block;margin-top:8px;padding:5px 14px;border-radius:999px;font-weight:600;font-size:13px}
+.fr{display:grid;grid-template-columns:110px 1fr 46px;gap:8px;align-items:center;font-size:12px;margin:5px 0}
+.fr .t{height:10px;background:var(--bd);border-radius:5px;position:relative}
+.fr .t i{position:absolute;top:0;height:100%;border-radius:5px}.fr .t:after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;border-left:1px solid var(--mu)}
+.scroll{overflow-x:auto}svg text{fill:var(--mu);font-size:11px}
+.note{font-size:12px;color:var(--mu);margin-top:6px}
+</style></head><body>
+<canvas id="bg"></canvas>
+<div class="wrap">
+<header><div><h1>Loan<span>Lens</span> · Approval Predictor</h1><div class="sub">Logistic model trained on 614 loan applications · in-sample accuracy ≈ 81%</div></div>
+<div class="bar"><span class="sub">Background:</span><button data-bg="network" class="on">Network</button><button data-bg="aurora">Aurora</button><button data-bg="grid">Grid</button><button data-bg="off">Off</button><button id="th">◐ Theme</button></div></header>
+<div class="grid"><div>
+<div class="card"><h2>Applicant profile</h2>
+<div class="row"><div><label>Credit history</label><select id="credit"><option value="1">Meets guidelines</option><option value="0">Does not meet</option></select></div>
+<div><label>Property area</label><select id="area"><option>Semiurban</option><option>Urban</option><option>Rural</option></select></div>
+<div><label>Married</label><select id="married"><option>Yes</option><option>No</option></select></div>
+<div><label>Education</label><select id="edu"><option>Graduate</option><option>Not Graduate</option></select></div>
+<div><label>Self employed</label><select id="self"><option>No</option><option>Yes</option></select></div>
+<div><label>Loan term (months)</label><select id="term"><option>360</option><option>480</option><option>300</option><option>240</option><option>180</option><option>120</option><option>84</option><option>60</option></select></div></div>
+<label>Applicant income <span class="val" id="v1"></span></label><input type="range" id="inc" min="1000" max="30000" step="250" value="5000">
+<label>Co-applicant income <span class="val" id="v2"></span></label><input type="range" id="co" min="0" max="15000" step="250" value="1500">
+<label>Loan amount (₹ thousands) <span class="val" id="v3"></span></label><input type="range" id="amt" min="10" max="500" step="5" value="130">
+</div>
+<div class="card"><h2>Portfolio benchmark (historical approval)</h2><div id="bench"></div></div>
+</div><div>
+<div class="card gauge"><h2>Predicted approval probability</h2>
+<svg viewBox="0 0 220 125" width="270"><path d="M20 110A90 90 0 0 1 200 110" fill="none" stroke="var(--bd)" stroke-width="16" stroke-linecap="round"/><path id="arc" d="M20 110A90 90 0 0 1 200 110" fill="none" stroke="var(--ac)" stroke-width="16" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100" style="transition:all .5s"/></svg>
+<div class="pct" id="pct">–</div><div><span class="verdict" id="ver"></span></div><div class="note" id="risk"></div></div>
+<div class="card"><h2>What drives this prediction</h2><div id="drv"></div><div class="note">Bars show each factor's push versus the average applicant (right = raises approval odds).</div></div>
+<div class="card"><h2>What-if: probability vs loan amount</h2><div class="scroll"><svg id="wi" viewBox="0 0 520 190" width="100%"></svg></div></div>
+</div></div>
+<div class="note" style="text-align:center">Educational model built from your cleaned dataset — not a lending decision tool.</div></div>
+<script>
+const M={b:.831,w:{credit:1.3604,married:.2797,grad:.153,semi:.4215,urban:.0707,self:-.0049,linc:.0468,lamt:-.1872,term:-.0447},
+mu:{credit:.855,married:.6531,grad:.7818,semi:.3795,urban:.329,self:.1336,linc:8.6696,lamt:4.8661,term:.9511},
+sd:{credit:.3523,married:.4764,grad:.4134,semi:.4857,urban:.4702,self:.3404,linc:.545,lamt:.4908,term:.1790}};
+const LB={credit:"Credit history",married:"Marital status",grad:"Education",semi:"Semiurban area",urban:"Urban area",self:"Self employed",linc:"Total income",lamt:"Loan amount",term:"Loan term"};
+const $=id=>document.getElementById(id),sg=x=>1/(1+Math.exp(-x));
+function feats(o){return{credit:+o.credit,married:o.married=="Yes"?1:0,grad:o.edu=="Graduate"?1:0,semi:o.area=="Semiurban"?1:0,urban:o.area=="Urban"?1:0,self:o.self=="Yes"?1:0,linc:Math.log1p(o.inc+o.co),lamt:Math.log1p(o.amt),term:o.term/360}}
+function prob(o){const f=feats(o);let s=M.b;for(const k in f)s+=M.w[k]*(f[k]-M.mu[k])/M.sd[k];return sg(s)}
+function read(){return{credit:$("credit").value,area:$("area").value,married:$("married").value,edu:$("edu").value,self:$("self").value,term:+$("term").value,inc:+$("inc").value,co:+$("co").value,amt:+$("amt").value}}
+let P=.7;
+function update(){const o=read();$("v1").textContent="₹"+o.inc.toLocaleString();$("v2").textContent="₹"+o.co.toLocaleString();$("v3").textContent="₹"+o.amt+"k";
+P=prob(o);const p=Math.round(P*100),c=P>=.5?"var(--ac)":"var(--rs)";
+$("pct").textContent=p+"%";$("pct").style.color=c;$("arc").style.stroke=c;$("arc").setAttribute("stroke-dasharray",p+" 100");
+$("ver").textContent=P>=.75?"Likely approved":P>=.5?"Leaning approval":P>=.3?"Borderline – elevated risk":"High risk of rejection";
+$("ver").style.background=c;$("ver").style.color="#04120a";
+$("risk").textContent=o.credit=="0"?"Credit history is the dominant risk factor: only ~8% of such applicants were approved historically.":"Risk band: "+(P>=.75?"Low":P>=.5?"Moderate":"High");
+const f=feats(o),d=Object.keys(f).map(k=>[k,M.w[k]*(f[k]-M.mu[k])/M.sd[k]]).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]));
+$("drv").innerHTML=d.map(([k,v])=>{const w=Math.min(50,Math.abs(v)*22);return`<div class="fr"><span>${LB[k]}</span><div class="t"><i style="${v>=0?"left:50%":"right:50%"};width:${w}%;background:${v>=0?"var(--ac)":"var(--rs)"}"></i></div><span>${v>=0?"+":""}${v.toFixed(2)}</span></div>`}).join("");
+let pts=[];for(let a=10;a<=500;a+=10)pts.push([a,prob({...o,amt:a})]);
+const X=a=>40+(a-10)/490*460,Y=p=>160-p*140,pa=pts.map((q,i)=>(i?"L":"M")+X(q[0]).toFixed(1)+" "+Y(q[1]).toFixed(1)).join("");
+$("wi").innerHTML=`<line x1="40" x2="500" y1="${Y(.5)}" y2="${Y(.5)}" stroke="var(--mu)" stroke-dasharray="4"/><path d="${pa}" fill="none" stroke="${c}" stroke-width="3"/><circle cx="${X(o.amt)}" cy="${Y(P)}" r="6" fill="${c}"/>`+[0,.25,.5,.75,1].map(v=>`<text x="4" y="${Y(v)+4}">${v*100}%</text>`).join("")+[10,100,200,300,400,500].map(a=>`<text x="${X(a)-10}" y="182">${a}k</text>`).join("");
+tint()}
+document.querySelectorAll("select,input").forEach(e=>e.addEventListener("input",update));
+const B={"Credit history OK":79,"Credit history bad":7.9,"Semiurban":76.8,"Urban":65.8,"Rural":61.5,"Graduate":70.8,"Not graduate":61.2,"Married":71.8,"Unmarried":62.9};
+$("bench").innerHTML=Object.entries(B).map(([k,v])=>`<div class="fr" style="grid-template-columns:120px 1fr 44px"><span>${k}</span><div class="t" style="background:var(--bd)"><i style="left:0;width:${v}%;background:var(--ac);opacity:.75"></i></div><span>${v}%</span></div>`).join("");
+$("bench").querySelectorAll(".t").forEach(t=>t.style.setProperty("--x","0"));
+/* theme */
+$("th").onclick=()=>{const r=document.documentElement,d=r.dataset.theme?r.dataset.theme=="dark":!matchMedia("(prefers-color-scheme:light)").matches;r.dataset.theme=d?"light":"dark";dark=!d}
+let dark=!matchMedia("(prefers-color-scheme:light)").matches;
+/* interactive background */
+const cv=$("bg"),cx=cv.getContext("2d");let W,H,mode="network",mouse={x:-999,y:-999},t=0,hue=140,nodes=[];
+function rs(){W=cv.width=innerWidth;H=cv.height=innerHeight;nodes=Array.from({length:Math.min(90,W/14|0)},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.6,vy:(Math.random()-.5)*.6}))}
+addEventListener("resize",rs);rs();
+addEventListener("pointermove",e=>{mouse.x=e.clientX;mouse.y=e.clientY});
+function tint(){hue=P>=.5?140-(1-P)*40:8+P*60}
+document.querySelectorAll("[data-bg]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-bg]").forEach(x=>x.classList.remove("on"));b.classList.add("on");mode=b.dataset.bg});
+function loop(){t+=.01;cx.clearRect(0,0,W,H);const L=dark?60:40,col=(a)=>`hsla(${hue},80%,${L}%,${a})`;
+if(mode=="network"){for(const n of nodes){const dx=n.x-mouse.x,dy=n.y-mouse.y,d=Math.hypot(dx,dy);if(d<140){n.vx+=dx/d*.05;n.vy+=dy/d*.05}n.vx*=.99;n.vy*=.99;n.x=(n.x+n.vx+W)%W;n.y=(n.y+n.vy+H)%H;cx.fillStyle=col(.8);cx.beginPath();cx.arc(n.x,n.y,2+P*2,0,7);cx.fill()}
+for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){const d=Math.hypot(nodes[i].x-nodes[j].x,nodes[i].y-nodes[j].y);if(d<130){cx.strokeStyle=col(.25*(1-d/130));cx.beginPath();cx.moveTo(nodes[i].x,nodes[i].y);cx.lineTo(nodes[j].x,nodes[j].y);cx.stroke()}}
+for(const n of nodes){const d=Math.hypot(n.x-mouse.x,n.y-mouse.y);if(d<170){cx.strokeStyle=col(.5);cx.beginPath();cx.moveTo(n.x,n.y);cx.lineTo(mouse.x,mouse.y);cx.stroke()}}}
+else if(mode=="aurora"){for(let i=0;i<4;i++){const x=W*(.2+.6*((Math.sin(t*.7+i*1.7)+1)/2))+(mouse.x-W/2)*.1*(i+1)/4,y=H*(.3+.4*((Math.cos(t*.5+i*2.3)+1)/2)),r=Math.max(W,H)*.35,g=cx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`hsla(${hue+i*35},85%,${L}%,.35)`);g.addColorStop(1,"transparent");cx.fillStyle=g;cx.fillRect(0,0,W,H)}}
+else if(mode=="grid"){const s=44;for(let x=0;x<=W;x+=s)for(let y=0;y<=H;y+=s){const d=Math.hypot(x-mouse.x,y-mouse.y),k=Math.max(0,1-d/220),w=Math.sin(t*2+x*.01+y*.01)*.5+.5;cx.fillStyle=col(.12+.15*w+.7*k);cx.beginPath();cx.arc(x,y,1.5+4*k,0,7);cx.fill()}}
+requestAnimationFrame(loop)}
+update();loop();
+</script></body></html>
